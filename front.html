@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEROSHIPS - Ground Control Station (Direct MQTT)</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <!-- MQTT.js Library -->
+    <script src="https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a2980 50%, #26d0ce 100%);
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            opacity: 1;
+            margin-top: 0;
+            padding-top: 70px;
+        }
+
+        /* Navigation Styles */
+        .navbar {
+            background: rgba(12, 20, 69, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 8px 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(38, 208, 206, 0.3);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        /* Logo Section */
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-section .logo-nav {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            border: 2px solid #26d0ce;
+            background: #26d0ce;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #26d0ce, #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+
+        .brand-subtitle {
+            font-size: 0.7rem;
+            color: #26d0ce;
+            letter-spacing: 1px;
+            line-height: 1;
+        }
+
+        /* MQTT Status Indicator */
+        .mqtt-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .mqtt-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            animation: pulse 2s infinite;
+        }
+
+        .mqtt-indicator.connected {
+            background: #26d0ce;
+        }
+
+        /* Right Logo Section */
+        .right-logo-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-direction: row-reverse;
+        }
+        
+        .right-logo-section img {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            border: 2px solid #26d0ce;
+        }
+        
+        .right-brand-text {
+            display: flex;
+            flex-direction: column;
+            text-align: right;
+        }
+        
+        .right-brand-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #26d0ce, #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+        
+        .right-brand-subtitle {
+            font-size: 0.7rem;
+            color: #26d0ce;
+            letter-spacing: 1px;
+            line-height: 1;
+        }
+
+        /* Dashboard Container */
+        .dashboard {
+            margin-top: 0px;
+            padding: 15px;
+            max-width: 100vw;
+            margin-left: auto;
+            margin-right: auto;
+            height: calc(100vh - 75px);
+            display: grid;
+            grid-template-columns: 2fr 1.2fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 15px;
+        }
+
+        /* Main Map Container */
+        .main-map-container {
+            grid-column: 1 / 2;
+            grid-row: 1 / 3;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 15px;
+            border: 1px solid rgba(38, 208, 206, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Custom Map Container */
+        .custom-map-container {
+            grid-column: 2 / 3;
+            grid-row: 1 / 2;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 15px;
+            border: 1px solid rgba(38, 208, 206, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #26d0ce;
+            flex-shrink: 0;
+        }
+
+        #map {
+            width: 100%;
+            flex: 1;
+            border-radius: 15px;
+            border: 2px solid rgba(38, 208, 206, 0.5);
+            min-height: 0;
+        }
+
+        /* Custom Map Canvas */
+        #petaCanvas {
+            width: 100%;
+            flex: 1;
+            border-radius: 15px;
+            border: 2px solid rgba(38, 208, 206, 0.5);
+            background-color: #f0f8ff;
+            min-height: 0;
+        }
+
+        /* Sensor Data Panel */
+        .sensor-panel {
+            grid-column: 2 / 3;
+            grid-row: 2 / 3;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            height: 100%;
+        }
+
+        .sensor-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 10px;
+            border: 1px solid rgba(38, 208, 206, 0.3);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .sensor-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(38, 208, 206, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .sensor-card:hover::before {
+            left: 100%;
+        }
+
+        .sensor-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(38, 208, 206, 0.2);
+        }
+
+        .sensor-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #26d0ce;
+        }
+
+        .sensor-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-align: center;
+            background: linear-gradient(45deg, #ffffff, #26d0ce);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Status-specific styling */
+        .status-text {
+            font-size: 0.8rem !important;
+            font-weight: bold;
+            text-align: center;
+            padding: 2px 4px;
+            border-radius: 4px;
+            color: white !important;
+            background: transparent !important;
+            -webkit-background-clip: unset !important;
+            -webkit-text-fill-color: white !important;
+            background-clip: unset !important;
+        }
+
+        .status-0 { background: #6c757d !important; }
+        .status-1 { background: #007bff !important; }
+        .status-2 { background: #28a745 !important; }
+        .status-3 { background: #ffc107 !important; color: #000 !important; }
+        .status-4 { background: #fd7e14 !important; }
+        .status-5 { background: #e83e8c !important; }
+        .status-6 { background: #17a2b8 !important; }
+        .status-7 { background: #dc3545 !important; }
+        .status-8 { background: #6f42c1 !important; }
+
+        /* Image Gallery */
+        .image-gallery {
+            grid-column: 3 / 4;
+            grid-row: 1 / 3;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            height: 100%;
+        }
+
+        .gallery-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 12px;
+            border: 1px solid rgba(38, 208, 206, 0.3);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            flex: 1;
+            align-items: center;
+        }
+
+        .image-item {
+            width: 100%;
+            height: 150px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid rgba(38, 208, 206, 0.5);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #26d0ce;
+        }
+
+        .image-item:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 20px rgba(38, 208, 206, 0.3);
+        }
+
+        .image-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .geo-tag {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            font-size: 0.65rem;
+            text-align: center;
+            padding: 4px 6px;
+            line-height: 1.2;
+            z-index: 2;
+        }
+
+        /* Status Indicators */
+        .status-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #26d0ce;
+            animation: pulse 2s infinite;
+        }
+
+        .status-offline {
+            background: #ff6b6b;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(38, 208, 206, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(38, 208, 206, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(38, 208, 206, 0); }
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.5);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        /* Trail Control Panel */
+        .trail-controls {
+            position: absolute;
+            top: 50px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 8px;
+            border: 1px solid rgba(38, 208, 206, 0.3);
+            z-index: 1000;
+        }
+
+        .trail-btn {
+            background: linear-gradient(45deg, #26d0ce, #1a2980);
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            margin: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .trail-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 10px rgba(38, 208, 206, 0.3);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: 1.8fr 1fr 0.8fr;
+            }
+            
+            .sensor-value {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 0.8fr 0.6fr 0.8fr;
+                height: auto;
+                min-height: calc(100vh - 120px);
+            }
+
+            .main-map-container {
+                grid-column: 1 / 2;
+                grid-row: 1 / 2;
+            }
+
+            .custom-map-container {
+                grid-column: 1 / 2;
+                grid-row: 2 / 3;
+            }
+
+            .sensor-panel {
+                grid-column: 1 / 2;
+                grid-row: 3 / 4;
+                flex-direction: row;
+                overflow-x: auto;
+            }
+
+            .image-gallery {
+                grid-column: 1 / 2;
+                grid-row: 4 / 5;
+                flex-direction: row;
+                overflow-x: auto;
+            }
+            
+            .right-logo-section {
+                display: none;
+            }
+
+            .sensor-card {
+                padding: 8px;
+                min-width: 120px;
+            }
+
+            .sensor-value {
+                font-size: 1rem;
+            }
+
+            .trail-controls {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-container">
+                <div class="logo-section">
+                    <img src="image1/logo.png" alt="AEROSHIPS" style="width: 35px; height: 35px; border-radius: 50%; border: 2px solid #26d0ce;">
+                    <div class="brand-text">
+                        <div class="brand-title">AEROSHIPS</div>
+                        <div class="brand-subtitle">AUTONOMOUS ROBOBOAT TEAM</div>
+                    </div>
+                </div>
+                
+                <!-- MQTT Status -->
+                <div class="mqtt-status">
+                    <div class="mqtt-indicator" id="mqtt-indicator"></div>
+                    <span id="mqtt-status-text">Disconnected</span>
+                </div>
+                
+                <div class="right-logo-section">
+                    <img src="image1/PPNS.png" alt="PPNS">
+                    <div class="right-brand-text">
+                        <div class="right-brand-title">PPNS</div>
+                        <div class="right-brand-subtitle">POLITEKNIK PERKAPALAN NEGERI SURABAYA</div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Dashboard -->
+        <div class="dashboard">
+            <!-- Main Map Section -->
+            <div class="main-map-container">
+                <div class="section-title">
+                    <i class="fas fa-map-marked-alt"></i>
+                    Real-time Navigation Map
+                </div>
+                <div class="trail-controls">
+                    <button class="trail-btn" onclick="downloadImagesWithGeoTags()">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                    <!--<button class="trail-btn" onclick="clearBoatTrail()">-->
+                    <!--    <i class="fas fa-eraser"></i> Clear-->
+                    <!--</button>-->
+                    <!--<button class="trail-btn" onclick="showTrailStats()">-->
+                    <!--    <i class="fas fa-chart-line"></i> Stats-->
+                    <!--</button>-->
+                </div>
+                <div id="map"></div>
+            </div>
+
+            <!-- Custom Map Section -->
+            <div class="custom-map-container">
+                <div class="section-title">
+                    <i class="fas fa-compass"></i>
+                    Lintasan B
+                </div>
+                <canvas id="petaCanvas" width="400" height="300"></canvas>
+            </div>
+
+            <!-- Sensor Data Panel -->
+            <div class="sensor-panel">
+                <div class="sensor-card">
+                    <div class="status-indicator" id="gps-status"></div>
+                    <div class="sensor-header">
+                        <i class="fas fa-crosshairs"></i>
+                        GPS COORDINATES
+                    </div>
+                    <div class="sensor-value">
+                        <div style="font-size: 0.7rem; margin-bottom: 3px;">LAT: <span id="lati">Waiting...</span></div>
+                        <div style="font-size: 0.7rem;">LON: <span id="logi">Waiting...</span></div>
+                    </div>
+                </div>
+                
+                <div class="sensor-card">
+                    <div class="status-indicator" id="compass-status"></div>
+                    <div class="sensor-header">
+                        <i class="fas fa-route"></i>
+                        STATUS KAPAL
+                    </div>
+                    <div class="sensor-value">
+                        <span id="roll" class="status-text">Waiting...</span>
+                    </div>
+                </div>
+            
+                <div class="sensor-card">
+                    <div class="status-indicator" id="attitude-status"></div>
+                    <div class="sensor-header">
+                        <i class="fas fa-plane"></i>
+                        ATTITUDE DATA
+                    </div>
+                    <div class="sensor-value" style="font-size:.70rem; line-height:1.25;">
+                        <div style="display:flex; justify-content:space-between; width:100%;">
+                            <div>
+                                <div>COG: <span id="compass">Waiting...</span>°</div>
+                                <div>SOG: <span id="pitch">Waiting...</span>knot</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div>V-BAT: <span id="suhu">Waiting...</span>V</div>
+                                <div>KEDALAMAN: <span id="kedalaman">Waiting...</span>m</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image Gallery -->
+            <div class="image-gallery">
+                <div class="gallery-section">
+                    <div class="section-title">
+                        <i class="fas fa-leaf"></i>
+                        MANGROVE
+                        <button class="trail-btn" onclick="manualRefreshImage('mangrove')" style="margin-left: auto; font-size: 0.6rem; padding: 2px 6px;">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div class="image-grid">
+                        <div class="image-item">
+                            <div class="image-wrapper">
+                                <img src="aero_ftp/uploads/foto_box_hijau_zed.jpg" alt="Mangrove Image" id="img-mangrove">
+                                <div class="geo-tag" id="geo-tag-mangrove" data-locked="false">Waiting for data...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gallery-section">
+                    <div class="section-title">
+                        <i class="fas fa-fish"></i>
+                        FISH
+                        <button class="trail-btn" onclick="manualRefreshImage('fish')" style="margin-left: auto; font-size: 0.6rem; padding: 2px 6px;">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div class="image-grid">
+                        <div class="image-item">
+                            <div class="image-wrapper">
+                                <img src="aero_ftp/uploads/foto_bawah_air_biru.jpg" alt="Fish Image" id="img-fish">
+                                <div class="geo-tag" id="geo-tag-fish" data-locked="false">Waiting for data...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // ========== MQTT CONFIGURATION ==========
+        const MQTT_CONFIG = {
+            host: 'wss://2bb306f80e3d4a76a936ca163065fdc8.s1.eu.hivemq.cloud:8884/mqtt',
+            options: {
+                username: 'esp32_client',
+                password: 'Aerojuara1',
+                clientId: 'web_client_' + Math.random().toString(16).substr(2, 8),
+                clean: true,
+                reconnectPeriod: 1000,
+                connectTimeout: 30 * 1000
+            },
+            topic: 'kapal/data'
+        };
+
+        let mqttClient = null;
+        let lastMqttData = null;
+        let currentImageFile = {
+            mangrove: null,
+            fish: null
+        };
+        let hasPageReloadedOnStart = false;
+
+
+        // ========== STATUS MAPPING ==========
+        function getStatusText(rollValue) {
+            const statusMap = {
+                0: { text: 'KAPAL STOP', icon: 'fas fa-stop-circle' },
+                1: { text: 'START', icon: 'fas fa-route' },
+                2: { text: 'LINTASAN 1', icon: 'fas fa-route' },
+                3: { text: 'LINTASAN 2', icon: 'fas fa-route' },
+                4: { text: 'LINTASAN 3', icon: 'fas fa-route' },
+                5: { text: 'FOTO MANGROVE', icon: 'fas fa-camera' },
+                6: { text: 'FOTO IKAN', icon: 'fas fa-camera' },
+                7: { text: 'DOCKING', icon: 'fas fa-anchor' },
+                8: { text: 'FINIS', icon: 'fas fa-flag-checkered' }
+            };
+
+            const numericValue = parseInt(rollValue);
+            return statusMap[numericValue] || { text: `UNKNOWN (${rollValue})`, icon: 'fas fa-question' };
+        }
+
+        function updateStatusDisplay(rollValue) {
+            const rollElement = document.getElementById('roll');
+            const statusInfo = getStatusText(rollValue);
+            
+            rollElement.className = 'status-text';
+            rollElement.classList.add(`status-${parseInt(rollValue) || 0}`);
+            rollElement.innerHTML = `<i class="${statusInfo.icon}"></i> ${statusInfo.text}`;
+            
+            const sensorHeader = rollElement.closest('.sensor-card').querySelector('.sensor-header i');
+            sensorHeader.className = statusInfo.icon;
+        }
+
+        // ========== MQTT CONNECTION ==========
+        function connectMQTT() {
+            console.log('Connecting to MQTT broker...');
+            
+            try {
+                mqttClient = mqtt.connect(MQTT_CONFIG.host, MQTT_CONFIG.options);
+
+                mqttClient.on('connect', () => {
+                    console.log('✓ Connected to MQTT broker');
+                    document.getElementById('mqtt-indicator').classList.add('connected');
+                    document.getElementById('mqtt-status-text').textContent = 'Connected';
+                    
+                    mqttClient.subscribe(MQTT_CONFIG.topic, (err) => {
+                        if (err) {
+                            console.error('Subscription error:', err);
+                        } else {
+                            console.log(`✓ Subscribed to topic: ${MQTT_CONFIG.topic}`);
+                        }
+                    });
+                });
+
+                mqttClient.on('message', (topic, message) => {
+                    try {
+                        const data = JSON.parse(message.toString());
+                        console.log('📩 MQTT Data received:', data);
+                        
+                        lastMqttData = data;
+                        updateDisplay(data);
+                        updateMapWithMQTT(data);
+                        updateCustomMapWithMQTT(data);
+                        
+                    } catch (error) {
+                        console.error('Error parsing MQTT message:', error);
+                    }
+                });
+
+                mqttClient.on('error', (error) => {
+                    console.error('MQTT Error:', error);
+                    document.getElementById('mqtt-indicator').classList.remove('connected');
+                    document.getElementById('mqtt-status-text').textContent = 'Error';
+                });
+
+                mqttClient.on('offline', () => {
+                    console.log('⚠ MQTT offline');
+                    document.getElementById('mqtt-indicator').classList.remove('connected');
+                    document.getElementById('mqtt-status-text').textContent = 'Offline';
+                });
+
+                mqttClient.on('reconnect', () => {
+                    console.log('🔄 Reconnecting to MQTT...');
+                    document.getElementById('mqtt-status-text').textContent = 'Reconnecting...';
+                });
+
+            } catch (error) {
+                console.error('Failed to connect MQTT:', error);
+                document.getElementById('mqtt-status-text').textContent = 'Connection Failed';
+            }
+        }
+
+        // ========== IMAGE MANAGEMENT ==========
+        let imageRefreshTimers = {
+            mangrove: null,
+            fish: null
+        };
+        
+        let imageStatus = {
+            mangrove: {
+                isRefreshing: false,
+                lastRefresh: null,
+                targetStatus: 5  // Status untuk foto mangrove
+            },
+            fish: {
+                isRefreshing: false,
+                lastRefresh: null,
+                targetStatus: 6  // Status untuk foto ikan
+            }
+        };
+
+        function startImageRefresh(imageType) {
+            const config = imageStatus[imageType];
+            
+            if (config.isRefreshing) {
+                console.log(`⚠️ ${imageType} already refreshing`);
+                return;
+            }
+            
+            config.isRefreshing = true;
+            config.lastRefresh = new Date();
+            
+            console.log(`🔄 Starting ${imageType} image refresh`);
+            
+            const imgId = imageType === 'mangrove' ? 'img-mangrove' : 'img-fish';
+            const imgPath = imageType === 'mangrove' 
+                ? 'aero_ftp/uploads/foto_box_hijau_zed.jpg'
+                : 'aero_ftp/uploads/foto_bawah_air_biru.jpg';
+            
+            const imgEl = document.getElementById(imgId);
+            
+            // Refresh setiap 2 detik selama 30 detik (15 kali refresh)
+            let refreshCount = 0;
+            const maxRefresh = 15;
+            const refreshInterval = 2000; // 2 detik
+            
+            imageRefreshTimers[imageType] = setInterval(() => {
+                refreshCount++;
+                
+                const newSrc = `${imgPath}?t=${Date.now()}`;
+                imgEl.src = newSrc;
+                
+                console.log(`🖼️ Refreshing ${imageType} image (${refreshCount}/${maxRefresh})`);
+                
+                // if (refreshCount >= maxRefresh) {
+                //     stopImageRefresh(imageType);
+                // }
+                if (refreshCount === 1 && lastMqttData) {
+                    updateSingleGeoTag(imageType, lastMqttData);
+                }
+                
+                if (refreshCount >= maxRefresh) {
+                    stopImageRefresh(imageType);
+                }
+            }, refreshInterval);
+        }
+
+        function stopImageRefresh(imageType) {
+            if (imageRefreshTimers[imageType]) {
+                clearInterval(imageRefreshTimers[imageType]);
+                imageRefreshTimers[imageType] = null;
+                imageStatus[imageType].isRefreshing = false;
+                console.log(`✓ Stopped ${imageType} image refresh`);
+            }
+        }
+
+        function manualRefreshImage(imageType) {
+            console.log(`🔄 Manual refresh triggered for ${imageType}`);
+            
+            // Stop existing refresh jika ada
+            stopImageRefresh(imageType);
+            
+            // Start new refresh
+            startImageRefresh(imageType);
+            
+            // Feedback visual
+            const btnIcon = event.target.closest('button').querySelector('i');
+            btnIcon.classList.add('fa-spin');
+            
+            setTimeout(() => {
+                btnIcon.classList.remove('fa-spin');
+            }, 2000);
+        }
+
+        function checkImageRefreshNeeded(data) {
+            const currentStatus = parseInt(data.roll);
+            
+            // Check untuk mangrove (status 5)
+            if (currentStatus === imageStatus.mangrove.targetStatus) {
+                if (!imageStatus.mangrove.isRefreshing) {
+                    console.log('📸 Status FOTO MANGROVE detected - Starting image refresh');
+                    startImageRefresh('mangrove');
+                }
+            }
+            
+            // Check untuk fish (status 6)
+            if (currentStatus === imageStatus.fish.targetStatus) {
+                if (!imageStatus.fish.isRefreshing) {
+                    console.log('📸 Status FOTO IKAN detected - Starting image refresh');
+                    startImageRefresh('fish');
+                }
+            }
+        }
+
+        // ========== UPDATE DISPLAY ==========
+        function updateDisplay(data) {
+            document.getElementById('lati').textContent = data.lati ?? 'N/A';
+            document.getElementById('logi').textContent = data.logi ?? 'N/A';
+            updateStatusDisplay(data.roll ?? 'N/A');
+            document.getElementById('pitch').textContent = data.pitch ?? 'N/A';
+            document.getElementById('compass').textContent = data.compass ?? 'N/A';
+            document.getElementById('suhu').textContent = data.suhu ?? 'N/A';
+            document.getElementById('kedalaman').textContent = data.kedalaman ?? 'N/A';
+            const rollVal = parseInt(data.roll);
+            if (rollVal === 1) {  // START
+                clearUploadsAndReload();
+            }
+
+            updateStatusIndicators(data);
+            // updateGeoTags(data);
+            
+            // Check apakah perlu refresh gambar
+            checkImageRefreshNeeded(data);
+        }
+
+        function updateStatusIndicators(data) {
+            const gpsValid = data.lati && data.logi && isValidCoordinate(parseFloat(data.lati), parseFloat(data.logi));
+            document.getElementById('gps-status').classList.toggle('status-offline', !gpsValid);
+            
+            const rollValid = data.roll !== undefined && data.roll !== null && data.roll !== 'N/A';
+            document.getElementById('compass-status').classList.toggle('status-offline', !rollValid);
+            
+            const attitudeValid = data.pitch && data.compass;
+            document.getElementById('attitude-status').classList.toggle('status-offline', !attitudeValid);
+        }
+
+        // function updateGeoTags(data) {
+        //     const timestamp = new Date();
+        //     const day = timestamp.toLocaleDateString('en-GB', { weekday: 'short' });
+        //     const date = timestamp.toLocaleDateString('en-GB');
+        //     const time = timestamp.toLocaleTimeString('en-GB');
+
+        //     const lat = parseFloat(data.lati || 0).toFixed(5);
+        //     const lon = parseFloat(data.logi || 0).toFixed(5);
+        //     const compass = data.compass ?? 'N/A';
+        //     const sog = data.pitch ?? 'N/A';
+
+        //     const geoInfo = `Day: ${day}, Date: ${date}, Time: ${time}<br>Coordinate: [S ${Math.abs(lat)} E ${lon}]<br>SOG: ${sog} km/h, COG: ${compass}°`;
+
+        //     const mangroveTag = document.getElementById('geo-tag-mangrove');
+        //     if (mangroveTag && mangroveTag.dataset.locked !== "true" && data.roll === 5) {
+        //         mangroveTag.innerHTML = geoInfo;
+        //         mangroveTag.dataset.locked = "true";
+        //     }
+
+        //     const fishTag = document.getElementById('geo-tag-fish');
+        //     if (fishTag && fishTag.dataset.locked !== "true" && data.roll === 6) {
+        //         fishTag.innerHTML = geoInfo;
+        //         fishTag.dataset.locked = "true";
+        //     }
+        // }
+        
+        function updateSingleGeoTag(imageType, data) {
+            if (!data) {
+                console.log('updateSingleGeoTag: data kosong');
+                return;
+            }
+        
+            const timestamp = new Date();
+            const day = timestamp.toLocaleDateString('en-GB', { weekday: 'short' });
+            const date = timestamp.toLocaleDateString('en-GB');
+            const time = timestamp.toLocaleTimeString('en-GB');
+        
+            const lat = parseFloat(data.lati || 0).toFixed(5);
+            const lon = parseFloat(data.logi || 0).toFixed(5);
+            const compass = data.compass ?? 'N/A';
+            const sog = data.pitch ?? 'N/A';
+        
+            const geoInfo = `Day: ${day}, Date: ${date}, Time: ${time}<br>` +
+                            `Coordinate: [S ${Math.abs(lat)} E ${lon}]<br>` +
+                            `SOG: ${sog} km/h, COG: ${compass}°`;
+        
+            let tagId = '';
+            if (imageType === 'mangrove') tagId = 'geo-tag-mangrove';
+            else if (imageType === 'fish') tagId = 'geo-tag-fish';
+            else {
+                console.log('updateSingleGeoTag: imageType tidak dikenal', imageType);
+                return;
+            }
+        
+            const tagEl = document.getElementById(tagId);
+            if (!tagEl) {
+                console.log('updateSingleGeoTag: elemen geo-tag tidak ditemukan untuk', tagId);
+                return;
+            }
+        
+            tagEl.innerHTML = geoInfo;
+            tagEl.dataset.locked = "true"; // kunci supaya updateGeoTags() tidak ubah lagi
+        
+            // console.log(`✅ GeoTag ${imageType.toUpperCase()} di-update dari updateSingleGeoTag()`);
+        }
+
+        
+        function pollLatestImages() {
+            fetch(`get_latest_image.php?t=${Date.now()}`)
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.ok) return;
+        
+                    ['mangrove', 'fish'].forEach(type => {
+                        const info = res[type];
+                        if (!info || !info.exists) return;
+        
+                        // Kalau mtime berubah → ada file baru / ter-overwrite
+                        if (currentImageMtime[type] !== info.mtime) {
+                            currentImageMtime[type] = info.mtime;
+        
+                            const imgId = (type === 'mangrove') ? 'img-mangrove' : 'img-fish';
+                            const imgEl = document.getElementById(imgId);
+                            if (!imgEl) return;
+        
+                            // Paksa browser ambil file terbaru (cache buster)
+                            imgEl.src = info.url + `?t=${Date.now()}`;
+        
+                            console.log(`📸 New ${type} image detected: ${info.file}`);
+        
+                            // Saat gambar baru, langsung tulis geotag pakai data MQTT terakhir
+                            if (lastMqttData) {
+                                updateSingleGeoTag(type, lastMqttData);
+                            }
+                        }
+                    });
+                })
+                .catch(err => console.error('Error polling latest images:', err));
+        }
+        
+        function clearUploadsAndReload() {
+            if (hasPageReloadedOnStart) return;
+            hasPageReloadedOnStart = true;
+        
+            console.log('🧹 Menghapus gambar di aero_ftp/uploads/ ...');
+        
+            fetch('clear_uploads.php')
+                .then(res => res.json())
+                .then(data => {
+                    console.log('clear_uploads.php response:', data);
+        
+                    if (!data.ok) {
+                        console.warn('⚠️ Penghapusan gambar ada error, halaman tetap direload.');
+                    }
+                })
+                .catch(err => {
+                    console.error('Error clear_uploads.php:', err);
+                })
+                .finally(() => {
+                    console.log('🔄 Reload halaman karena status = START');
+                    window.location.reload();
+                });
+        }
+
+
+
+        function isValidCoordinate(lat, lng) {
+            return !isNaN(lat) && !isNaN(lng) && 
+                   lat >= -90 && lat <= 90 && 
+                   lng >= -180 && lng <= 180 &&
+                   lat !== 0 && lng !== 0;
+        }
+
+        // ========== MAP VARIABLES ==========
+        let map;
+        let boatMarkers = [];
+        let boatPositions = [];
+        let boatPath = null;
+        let lastBoatPosition = null;
+
+        // ========== CUSTOM MAP VARIABLES ==========
+        let customCanvas, customCtx;
+        let customSensorData = [];
+        let customOffsetX = 0;
+        let customOffsetY = 0;
+
+        const MAP_WIDTH_METER = 25;
+        const MAP_HEIGHT_METER = 25;
+        const GRID_SIZE = 5;
+        const ROTATION_ANGLE = Math.PI/-1;
+        const FLIP_HORIZONTAL = true;
+        const FLIP_VERTICAL = true;
+
+        const LINTASAN_A = {
+            bouys: [
+                { x: -10.5, y: -3, color: 'green', label: '' },
+                { x: -8.5, y: -3, color: 'red', label: '' },
+                { x: -9.5, y: 0, color: 'green', label: '' },
+                { x: -7.5, y: 0, color: 'red', label: '' },
+                { x: -10.5, y: 3, color: 'green', label: '' },
+                { x: -8.5, y: 3, color: 'red', label: '' },
+                { x: -4, y: 8.5, color: 'green', label: '' },
+                { x: -4, y: 6.5, color: 'red', label: '' },
+                { x: -2, y: 8.5, color: 'green', label: '' },
+                { x: -2, y: 6.5, color: 'red', label: '' },
+                { x: 0, y: 8.5, color: 'green', label: '' },
+                { x: 0, y: 6.5, color: 'red', label: '' },
+                { x: 2, y: 8.5, color: 'green', label: '' },
+                { x: 2, y: 6.5, color: 'red', label: '' },
+                { x: 7, y: 5, color: 'green', label: '' },
+                { x: 9, y: 5, color: 'red', label: '' },
+                { x: 8, y: 2, color: 'green', label: '' },
+                { x: 10, y: 2, color: 'red', label: '' },
+                { x: 8, y: -1, color: 'green', label: '' },
+                { x: 10, y: -1, color: 'red', label: '' }
+            ],
+            boxes: [
+                { x: 8, y: -4, color: 'green', label: '' },
+                { x: 4, y: -8, color: 'blue', label: '' }
+            ],
+            docking: { x: -10, y: -10, color: 'green', label: '' }
+        };
+
+        let originalTopLeftLat = -7.278780, originalTopLeftLon = 112.793472;
+        let originalTopRightLat = -7.278780, originalTopRightLon = 112.793742;
+        let originalBottomLeftLat = -7.279050, originalBottomLeftLon = 112.793472;
+        let originalBottomRightLat = -7.279050, originalBottomRightLon = 112.793742;
+
+        let topLeftLat, topLeftLon, topRightLat, topRightLon;
+        let bottomLeftLat, bottomLeftLon, bottomRightLat, bottomRightLon;
+
+        // ========== LEAFLET MAP ==========
+        function initializeMap() {
+            try {
+                if (map) map.remove();
+
+                map = L.map('map', {
+                    center: [-7.278918, 112.793611],
+                    zoom: 18,
+                    zoomControl: true,
+                    attributionControl: true,
+                    maxZoom: 20,
+                    minZoom: 10
+                });
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(map);
+
+                console.log('✓ Map initialized');
+                
+                // Load historical data from database
+                loadDatabaseTrail();
+                
+            } catch (error) {
+                console.error('Map initialization error:', error);
+            }
+        }
+
+        function loadDatabaseTrail() {
+            fetch('get_data_3.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data && Array.isArray(data) && data.length > 0) {
+                        const latlngs = data
+                            .map(item => [parseFloat(item.lati), parseFloat(item.logi)])
+                            .filter(coord => isValidCoordinate(coord[0], coord[1]));
+
+                        if (latlngs.length > 0) {
+                            L.polyline(latlngs, { 
+                                color: '#1a2980', 
+                                weight: 3,
+                                opacity: 0.6
+                            }).addTo(map);
+                            
+                            console.log(`✓ Loaded ${latlngs.length} historical points`);
+                        }
+                    }
+                })
+                .catch(error => console.error('Error loading trail:', error));
+        }
+
+        function updateMapWithMQTT(data) {
+            const lat = parseFloat(data.lati);
+            const lng = parseFloat(data.logi);
+
+            if (!isValidCoordinate(lat, lng)) return;
+
+            const newPosition = [lat, lng];
+
+            if (!lastBoatPosition || 
+                Math.abs(lastBoatPosition[0] - lat) > 0.00001 || 
+                Math.abs(lastBoatPosition[1] - lng) > 0.00001) {
+                
+                boatPositions.push(newPosition);
+                lastBoatPosition = newPosition;
+
+                if (boatPositions.length > 1000) {
+                    boatPositions.shift();
+                }
+            }
+
+            boatMarkers.forEach(marker => map.removeLayer(marker));
+            boatMarkers = [];
+
+            if (boatPath) map.removeLayer(boatPath);
+
+            if (boatPositions.length > 1) {
+                boatPath = L.polyline(boatPositions, {
+                    color: '#26d0ce',
+                    weight: 4,
+                    opacity: 0.8
+                }).addTo(map);
+            }
+
+            const currentIcon = L.divIcon({
+                className: 'current-boat-marker',
+                html: `<div style="position: relative;">
+                        <div style="background: #00ff00; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);"></div>
+                        <div style="background: rgba(0, 255, 0, 0.3); width: 40px; height: 40px; border-radius: 50%; position: absolute; top: -10px; left: -10px; animation: pulse-ring 2s infinite;"></div>
+                       </div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            const currentMarker = L.marker(newPosition, {icon: currentIcon}).addTo(map);
+            
+            const statusInfo = getStatusText(data.roll);
+            const popupContent = `
+                <div style="font-family: 'Segoe UI', sans-serif; min-width: 200px;">
+                    <h4 style="color: #1a2980; margin: 0 0 10px 0;">🚤 AEROSHIPS (Live MQTT)</h4>
+                    <p><strong>📍 Position:</strong></p>
+                    <p style="margin-left: 15px;">Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}</p>
+                    <p><strong>🛣️ Status:</strong> ${statusInfo.text}</p>
+                    <p><strong>⚖️ Heading:</strong> ${data.compass || 'N/A'}°</p>
+                    <p><strong>🧭 SOG:</strong> ${data.pitch || 'N/A'} knot</p>
+                </div>
+            `;
+            
+            currentMarker.bindPopup(popupContent);
+            boatMarkers.push(currentMarker);
+
+            map.setView(newPosition, 18, {animate: true, duration: 1.0});
+        }
+
+        function clearBoatTrail() {
+            boatPositions = [];
+            lastBoatPosition = null;
+            
+            if (boatPath) {
+                map.removeLayer(boatPath);
+                boatPath = null;
+            }
+            
+            boatMarkers.forEach(marker => map.removeLayer(marker));
+            boatMarkers = [];
+            
+            console.log('Trail cleared');
+            alert('Trail cleared successfully!');
+        }
+
+        function showTrailStats() {
+            const totalPoints = boatPositions.length;
+            
+            if (totalPoints === 0) {
+                alert('No trail data available');
+                return;
+            }
+
+            let totalDistance = 0;
+            for (let i = 1; i < boatPositions.length; i++) {
+                const dist = map.distance(boatPositions[i-1], boatPositions[i]);
+                totalDistance += dist;
+            }
+
+            const statsMessage = `Trail Statistics:
+            
+📊 Total Points: ${totalPoints}
+📏 Total Distance: ${totalDistance.toFixed(2)} meters
+📍 Average Distance: ${totalPoints > 1 ? (totalDistance / (totalPoints - 1)).toFixed(2) : '0'} meters per segment
+⏱️ Last Updated: ${new Date().toLocaleTimeString()}`;
+
+            alert(statsMessage);
+        }
+
+        // ========== CUSTOM MAP ==========
+        function initializeCustomMap() {
+            customCanvas = document.getElementById("petaCanvas");
+            customCtx = customCanvas.getContext("2d");
+            
+            fixCustomCoordinates();
+            drawCustomMap();
+            
+            let isDragging = false;
+            let lastX, lastY;
+            
+            customCanvas.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastX = e.clientX;
+                lastY = e.clientY;
+            });
+            
+            customCanvas.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    customOffsetX += e.clientX - lastX;
+                    customOffsetY += e.clientY - lastY;
+                    lastX = e.clientX;
+                    lastY = e.clientY;
+                    drawCustomMap();
+                }
+            });
+            
+            customCanvas.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+        }
+
+        function fixCustomCoordinates() {
+            const avgTopLat = (originalTopLeftLat + originalTopRightLat) / 2;
+            const avgBottomLat = (originalBottomLeftLat + originalBottomRightLat) / 2;
+            
+            if (avgBottomLat > avgTopLat) {
+                topLeftLat = originalBottomLeftLat;
+                topLeftLon = originalBottomLeftLon;
+                topRightLat = originalBottomRightLat;
+                topRightLon = originalBottomRightLon;
+                bottomLeftLat = originalTopLeftLat;
+                bottomLeftLon = originalTopLeftLon;
+                bottomRightLat = originalTopRightLat;
+                bottomRightLon = originalTopRightLon;
+            } else {
+                topLeftLat = originalTopLeftLat;
+                topLeftLon = originalTopLeftLon;
+                topRightLat = originalTopRightLat;
+                topRightLon = originalTopRightLon;
+                bottomLeftLat = originalBottomLeftLat;
+                bottomLeftLon = originalBottomLeftLon;
+                bottomRightLat = originalBottomRightLat;
+                bottomRightLon = originalBottomRightLon;
+            }
+        }
+
+        function customLatLonToMeter(lat, lon) {
+            const minLat = Math.min(bottomLeftLat, bottomRightLat);
+            const maxLat = Math.max(topLeftLat, topRightLat);
+            const latNorm = (lat - minLat) / (maxLat - minLat);
+            
+            const leftLon = bottomLeftLon + (topLeftLon - bottomLeftLon) * latNorm;
+            const rightLon = bottomRightLon + (topRightLon - bottomRightLon) * latNorm;
+            const lonNorm = (lon - leftLon) / (rightLon - leftLon);
+            
+            const xMeter = (lonNorm - 0.5) * MAP_WIDTH_METER;
+            const yMeter = (latNorm - 0.5) * MAP_HEIGHT_METER;
+            
+            return { x: xMeter, y: yMeter };
+        }
+
+        function customMeterToCanvasFixed(xMeter, yMeter) {
+            const scale = Math.min(customCanvas.width / MAP_WIDTH_METER, customCanvas.height / MAP_HEIGHT_METER);
+            const x = (xMeter * scale) + customOffsetX + customCanvas.width / 2;
+            const y = customCanvas.height / 2 - (yMeter * scale) - customOffsetY;
+            return { x, y };
+        }
+
+        function drawCustomGrid() {
+            customCtx.strokeStyle = "#ddd";
+            customCtx.lineWidth = 1;
+            
+            for (let x = -MAP_WIDTH_METER/2; x <= MAP_WIDTH_METER/2; x += GRID_SIZE) {
+                const canvasStart = customMeterToCanvasFixed(x, -MAP_HEIGHT_METER/2);
+                const canvasEnd = customMeterToCanvasFixed(x, MAP_HEIGHT_METER/2);
+                customCtx.beginPath();
+                customCtx.moveTo(canvasStart.x, canvasStart.y);
+                customCtx.lineTo(canvasEnd.x, canvasEnd.y);
+                customCtx.stroke();
+            }
+            
+            for (let y = -MAP_HEIGHT_METER/2; y <= MAP_HEIGHT_METER/2; y += GRID_SIZE) {
+                const canvasStart = customMeterToCanvasFixed(-MAP_WIDTH_METER/2, y);
+                const canvasEnd = customMeterToCanvasFixed(MAP_WIDTH_METER/2, y);
+                customCtx.beginPath();
+                customCtx.moveTo(canvasStart.x, canvasStart.y);
+                customCtx.lineTo(canvasEnd.x, canvasEnd.y);
+                customCtx.stroke();
+            }
+        }
+
+        function drawBouy(xMeter, yMeter, color) {
+            const canvasPos = customMeterToCanvasFixed(xMeter, yMeter);
+            customCtx.beginPath();
+            customCtx.arc(canvasPos.x, canvasPos.y, 3, 0, 2 * Math.PI);
+            customCtx.fillStyle = color;
+            customCtx.fill();
+            customCtx.strokeStyle = '#000';
+            customCtx.lineWidth = 2;
+            customCtx.stroke();
+        }
+
+        function drawBox(xMeter, yMeter, color) {
+            const canvasPos = customMeterToCanvasFixed(xMeter, yMeter);
+            const size = 6;
+            customCtx.fillStyle = color;
+            customCtx.fillRect(canvasPos.x - size/2, canvasPos.y - size/2, size, size);
+            customCtx.strokeStyle = '#000';
+            customCtx.lineWidth = 2;
+            customCtx.strokeRect(canvasPos.x - size/2, canvasPos.y - size/2, size, size);
+        }
+
+        function drawDocking(xMeter, yMeter, color) {
+            const canvasPos = customMeterToCanvasFixed(xMeter, yMeter);
+            const width = 25;
+            const height = 10;
+            customCtx.fillStyle = color;
+            customCtx.fillRect(canvasPos.x - width/2, canvasPos.y - height/2, width, height);
+            customCtx.strokeStyle = '#000';
+            customCtx.lineWidth = 2;
+            customCtx.strokeRect(canvasPos.x - width/2, canvasPos.y - height/2, width, height);
+        }
+
+        const kapalImg = new Image();
+        kapalImg.src = "image1/kapal_atas.png";
+
+        function drawCustomShipIcon(xMeter, yMeter, heading) {
+            const canvasPos = customMeterToCanvasFixed(xMeter, yMeter);
+            const size = 40;
+            
+            customCtx.save();
+            customCtx.translate(canvasPos.x, canvasPos.y);
+            const adjustedHeading = heading - 1 + ROTATION_ANGLE * 180/Math.PI/2;
+            customCtx.rotate(adjustedHeading * Math.PI / 180);
+            customCtx.drawImage(kapalImg, -size/2, -size/2, size, size);
+            customCtx.restore();
+        
+            customCtx.fillStyle = "black";
+            customCtx.font = "10px Arial";
+            customCtx.fillText("AERO", canvasPos.x + 8, canvasPos.y - 8);
+        }
+
+        function drawCustomMap() {
+            customCtx.clearRect(0, 0, customCanvas.width, customCanvas.height);
+            
+            const gradient = customCtx.createLinearGradient(0, 0, 0, customCanvas.height);
+            gradient.addColorStop(0, "#e6f3ff");
+            gradient.addColorStop(1, "#b3d9ff");
+            customCtx.fillStyle = gradient;
+            customCtx.fillRect(0, 0, customCanvas.width, customCanvas.height);
+            
+            drawCustomGrid();
+            
+            LINTASAN_A.bouys.forEach(bouy => {
+                drawBouy(bouy.x, bouy.y, bouy.color);
+            });
+            
+            LINTASAN_A.boxes.forEach(box => {
+                drawBox(box.x, box.y, box.color);
+            });
+            
+            drawDocking(LINTASAN_A.docking.x, LINTASAN_A.docking.y, LINTASAN_A.docking.color);
+            
+            if (customSensorData.length > 0) {
+                // Gambar garis penghubung antar titik
+                if (customSensorData.length > 1) {
+                    customCtx.beginPath();
+                    customCtx.strokeStyle = "rgba(0, 100, 255, 0.6)";
+                    customCtx.lineWidth = 2;
+                    
+                    customSensorData.forEach((point, index) => {
+                        const canvasPos = customMeterToCanvasFixed(point.x, point.y);
+                        if (index === 0) {
+                            customCtx.moveTo(canvasPos.x, canvasPos.y);
+                        } else {
+                            customCtx.lineTo(canvasPos.x, canvasPos.y);
+                        }
+                    });
+                    
+                    customCtx.stroke();
+                }
+                
+                // Gambar titik-titik
+                customSensorData.forEach((point, index) => {
+                    const canvasPos = customMeterToCanvasFixed(point.x, point.y);
+                    customCtx.beginPath();
+                    
+                    // Titik pertama berwarna merah (start)
+                    if (index === 0) {
+                        customCtx.arc(canvasPos.x, canvasPos.y, 4, 0, 2 * Math.PI);
+                        customCtx.fillStyle = "red";
+                    } 
+                    // Titik terakhir akan diganti dengan icon kapal
+                    else if (index === customSensorData.length - 1) {
+                        customCtx.arc(canvasPos.x, canvasPos.y, 3, 0, 2 * Math.PI);
+                        customCtx.fillStyle = "green";
+                    }
+                    // Titik tengah berwarna biru
+                    else {
+                        customCtx.arc(canvasPos.x, canvasPos.y, 2, 0, 2 * Math.PI);
+                        customCtx.fillStyle = "blue";
+                    }
+                    
+                    customCtx.fill();
+                    customCtx.strokeStyle = "#333";
+                    customCtx.lineWidth = 1;
+                    customCtx.stroke();
+                });
+                
+                const lastPoint = customSensorData[customSensorData.length - 1];
+                drawCustomShipIcon(lastPoint.x, lastPoint.y, lastPoint.heading);
+            }
+        }
+
+        function updateCustomMapWithMQTT(data) {
+            const lat = parseFloat(data.lati);
+            const lng = parseFloat(data.logi);
+            
+            if (!isValidCoordinate(lat, lng)) return;
+            
+            const meterPos = customLatLonToMeter(lat, lng);
+            customSensorData.push({
+                x: meterPos.x,
+                y: meterPos.y,
+                heading: parseFloat(data.kelembaban || data.compass || 0)
+            });
+            
+            if (customSensorData.length > 1000) {
+                customSensorData.shift();
+            }
+            
+            drawCustomMap();
+        }
+
+        // ========== DOWNLOAD FUNCTIONS ==========
+        async function downloadImagesWithGeoTags() {
+            await Promise.all([
+                downloadOneWithGeo('img-mangrove', 'geo-tag-mangrove', 'Mangrove_Aeroships'),
+                downloadOneWithGeo('img-fish', 'geo-tag-fish', 'Fish_Aeroships')
+            ]);
+            alert('Download started for both images');
+        }
+
+        async function downloadOneWithGeo(imgId, tagId, filenameBase) {
+            const imgEl = document.getElementById(imgId);
+            const tagEl = document.getElementById(tagId);
+            if (!imgEl || !tagEl) return;
+
+            if (!imgEl.complete || imgEl.naturalWidth === 0) {
+                await new Promise(res => imgEl.addEventListener('load', res, { once: true }));
+            }
+
+            const w = imgEl.naturalWidth || imgEl.width;
+            const h = imgEl.naturalHeight || imgEl.height;
+
+            const cnv = document.createElement('canvas');
+            cnv.width = w;
+            cnv.height = h;
+            const ctx = cnv.getContext('2d');
+            ctx.drawImage(imgEl, 0, 0, w, h);
+
+            const lines = tagEl.innerHTML
+                .replace(/<\/?b>/g, '')
+                .split(/<br\s*\/?>/i)
+                .map(s => s.replace(/&nbsp;|&amp;/g, ' ').trim())
+                .filter(Boolean);
+
+            const paddingX = Math.round(w * 0.02);
+            const paddingY = Math.round(h * 0.015);
+            const lineGap = Math.round(h * 0.012);
+            const fontSize = Math.max(12, Math.round(h * 0.03));
+            ctx.font = `${fontSize}px Segoe UI, Arial, sans-serif`;
+
+            const textWidths = lines.map(t => ctx.measureText(t).width);
+            const boxW = Math.min(w - 2*paddingX, Math.max(...textWidths) + 2*paddingX);
+            const boxH = lines.length * fontSize + (lines.length - 1) * lineGap + 2*paddingY;
+
+            const boxX = Math.round((w - boxW) / 2);
+            const boxY = h - boxH - Math.round(h * 0.015);
+
+            roundRect(ctx, boxX, boxY, boxW, boxH, 12);
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fill();
+
+            ctx.fillStyle = '#fff';
+            ctx.textBaseline = 'top';
+            let ty = boxY + paddingY;
+            const tx = boxX + paddingX;
+            lines.forEach(line => {
+                ctx.fillText(line, tx, ty);
+                ty += fontSize + lineGap;
+            });
+
+            const a = document.createElement('a');
+            a.download = filenameBase + '.jpg';
+            a.href = cnv.toDataURL('image/jpeg', 0.92);
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+
+        function roundRect(ctx, x, y, w, h, r) {
+            const rr = Math.min(r, w/2, h/2);
+            ctx.beginPath();
+            ctx.moveTo(x + rr, y);
+            ctx.lineTo(x + w - rr, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+            ctx.lineTo(x + w, y + h - rr);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+            ctx.lineTo(x + rr, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+            ctx.lineTo(x, y + rr);
+            ctx.quadraticCurveTo(x, y, x + rr, y);
+            ctx.closePath();
+        }
+
+        // ========== INITIALIZATION ==========
+        $(document).ready(function() {
+            console.log('🚀 AEROSHIPS Direct MQTT initializing...');
+            
+            initializeMap();
+            initializeCustomMap();
+            connectMQTT();
+            
+            // Setup images - load sekali saja di awal
+            const mangroveImg = document.getElementById('img-mangrove');
+            const fishImg = document.getElementById('img-fish');
+            
+            mangroveImg.src = `aero_ftp/uploads/foto_box_hijau_zed.jpg?t=${Date.now()}`;
+            fishImg.src = `aero_ftp/uploads/foto_bawah_air_biru.jpg?t=${Date.now()}`;
+            
+            // Image error handling
+            mangroveImg.onerror = function() {
+                console.log('⚠️ Mangrove image not found');
+                this.style.display = 'none';
+            };
+            
+            fishImg.onerror = function() {
+                console.log('⚠️ Fish image not found');
+                this.style.display = 'none';
+            };
+            
+            // Image load success
+            mangroveImg.onload = function() {
+                console.log('✓ Mangrove image loaded');
+                this.style.display = 'block';
+            };
+            
+            fishImg.onload = function() {
+                console.log('✓ Fish image loaded');
+                this.style.display = 'block';
+            };
+            
+            setInterval(pollLatestImages, 2000);
+            
+            console.log('✓ System ready');
+            console.log('📸 Image refresh: Auto-start when status = 5 (Mangrove) or 6 (Fish)');
+        });
+
+        window.addEventListener('beforeunload', function() {
+            if (mqttClient) mqttClient.end();
+            
+            // Stop semua image refresh timer
+            stopImageRefresh('mangrove');
+            stopImageRefresh('fish');
+        });
+
+        window.addEventListener('resize', function() {
+            if (map) {
+                setTimeout(() => map.invalidateSize(), 100);
+            }
+            if (customCanvas) {
+                setTimeout(() => drawCustomMap(), 100);
+            }
+        });
+    </script>
+</body>
+</html>
