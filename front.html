@@ -670,15 +670,17 @@
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
         // ========== MQTT CONFIGURATION ==========
+        
         const MQTT_CONFIG = {
-            host: 'wss://2bb306f80e3d4a76a936ca163065fdc8.s1.eu.hivemq.cloud:8884/mqtt',
+            host: 'wss://a398f35fbf65406b80dee63d98dd7f81.s1.eu.hivemq.cloud:8884/mqtt',
             options: {
-                username: 'esp32_client',
-                password: 'Aerojuara1',
+                username: 'aeroshipsgcs',
+                password: 'aeroshipsppnsNo1',
                 clientId: 'web_client_' + Math.random().toString(16).substr(2, 8),
                 clean: true,
                 reconnectPeriod: 1000,
-                connectTimeout: 30 * 1000
+                connectTimeout: 30 * 1000,
+                keepalive: 60
             },
             topic: 'kapal/data'
         };
@@ -1661,4 +1663,5 @@
 </body>
 
 </html>
+
 
