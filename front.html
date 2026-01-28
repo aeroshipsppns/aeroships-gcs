@@ -1078,34 +1078,66 @@
         const FLIP_HORIZONTAL = true;
         const FLIP_VERTICAL = true;
 
-        const LINTASAN_A = {
+        // const LINTASAN_A = {
+        //     bouys: [
+        //         { x: -10.5, y: -3, color: 'green', label: '' },
+        //         { x: -8.5, y: -3, color: 'red', label: '' },
+        //         { x: -9.5, y: 0, color: 'green', label: '' },
+        //         { x: -7.5, y: 0, color: 'red', label: '' },
+        //         { x: -10.5, y: 3, color: 'green', label: '' },
+        //         { x: -8.5, y: 3, color: 'red', label: '' },
+        //         { x: -4, y: 8.5, color: 'green', label: '' },
+        //         { x: -4, y: 6.5, color: 'red', label: '' },
+        //         { x: -2, y: 8.5, color: 'green', label: '' },
+        //         { x: -2, y: 6.5, color: 'red', label: '' },
+        //         { x: 0, y: 8.5, color: 'green', label: '' },
+        //         { x: 0, y: 6.5, color: 'red', label: '' },
+        //         { x: 2, y: 8.5, color: 'green', label: '' },
+        //         { x: 2, y: 6.5, color: 'red', label: '' },
+        //         { x: 7, y: 5, color: 'green', label: '' },
+        //         { x: 9, y: 5, color: 'red', label: '' },
+        //         { x: 8, y: 2, color: 'green', label: '' },
+        //         { x: 10, y: 2, color: 'red', label: '' },
+        //         { x: 8, y: -1, color: 'green', label: '' },
+        //         { x: 10, y: -1, color: 'red', label: '' }
+        //     ],
+        //     boxes: [
+        //         { x: 8, y: -4, color: 'green', label: '' },
+        //         { x: 4, y: -8, color: 'blue', label: '' }
+        //     ],
+        //     docking: { x: -10, y: -10, color: 'green', label: '' }
+        // };
+
+        const LINTASAN_A = { //mirror
             bouys: [
-                { x: -10.5, y: -3, color: 'green', label: '' },
-                { x: -8.5, y: -3, color: 'red', label: '' },
-                { x: -9.5, y: 0, color: 'green', label: '' },
-                { x: -7.5, y: 0, color: 'red', label: '' },
-                { x: -10.5, y: 3, color: 'green', label: '' },
-                { x: -8.5, y: 3, color: 'red', label: '' },
-                { x: -4, y: 8.5, color: 'green', label: '' },
-                { x: -4, y: 6.5, color: 'red', label: '' },
-                { x: -2, y: 8.5, color: 'green', label: '' },
-                { x: -2, y: 6.5, color: 'red', label: '' },
-                { x: 0, y: 8.5, color: 'green', label: '' },
-                { x: 0, y: 6.5, color: 'red', label: '' },
+                { x: 10.5, y: -3, color: 'green', label: '' },
+                { x: 8.5, y: -3, color: 'red', label: '' },
+                { x: 9.5, y: 0, color: 'green', label: '' },
+                { x: 7.5, y: 0, color: 'red', label: '' },
+                { x: 10.5, y: 3, color: 'green', label: '' },
+                { x: 8.5, y: 3, color: 'red', label: '' },
+                { x: 4, y: 8.5, color: 'green', label: '' },
+                { x: 4, y: 6.5, color: 'red', label: '' },
                 { x: 2, y: 8.5, color: 'green', label: '' },
                 { x: 2, y: 6.5, color: 'red', label: '' },
-                { x: 7, y: 5, color: 'green', label: '' },
-                { x: 9, y: 5, color: 'red', label: '' },
-                { x: 8, y: 2, color: 'green', label: '' },
-                { x: 10, y: 2, color: 'red', label: '' },
-                { x: 8, y: -1, color: 'green', label: '' },
-                { x: 10, y: -1, color: 'red', label: '' }
+                { x: 0, y: 8.5, color: 'green', label: '' },
+                { x: 0, y: 6.5, color: 'red', label: '' },
+                { x: -2, y: 8.5, color: 'green', label: '' },
+                { x: -2, y: 6.5, color: 'red', label: '' },
+                { x: -7, y: 5, color: 'green', label: '' },
+                { x: -9, y: 5, color: 'red', label: '' },
+                { x: -8, y: 2, color: 'green', label: '' },
+                { x: -10, y: 2, color: 'red', label: '' },
+                { x: -8, y: -1, color: 'green', label: '' },
+                { x: -10, y: -1, color: 'red', label: '' }
             ],
+
             boxes: [
-                { x: 8, y: -4, color: 'green', label: '' },
-                { x: 4, y: -8, color: 'blue', label: '' }
+                { x: -8, y: -4, color: 'green', label: '' },
+                { x: -4, y: -8, color: 'blue', label: '' }
             ],
-            docking: { x: -10, y: -10, color: 'green', label: '' }
+
+            docking: { x: 10, y: -10, color: 'green', label: '' }
         };
 
         let originalTopLeftLat = -7.278780, originalTopLeftLon = 112.793472;
@@ -1661,6 +1693,7 @@
 </body>
 
 </html>
+
 
 
 
